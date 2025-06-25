@@ -1,0 +1,51 @@
+// backend/prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" // Verifique se está 'postgresql'
+  url      = env("DATABASE_URL")
+}
+
+model Movie {
+  id          String    @id @default(uuid())
+  title       String    @unique
+  description String?
+  genre       String
+  rating      String    // Classificação Indicativa
+  duration    Int       // Duração em minutos
+  releaseDate DateTime  @map("release_date") // Deve ser DateTime, sem @db.Date para SQLite
+  sessions    Session[]
+}
+
+model Room {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  capacity  Int
+  type      String    // 2D, 3D, IMAX
+  sessions  Session[]
+}
+
+model Session {
+  id        String    @id @default(uuid())
+  movieId   String
+  movie     Movie     @relation(fields: [movieId], references: [id])
+  roomId    String
+  room      Room      @relation(fields: [roomId], references: [id])
+  dateTime  DateTime  @map("date_time")
+  price     Float
+  language  String    // Dublado, Legendado
+  format    String    // 2D, 3D
+  tickets   Ticket[]
+}
+
+model Ticket {
+  id           String    @id @default(uuid())
+  sessionId    String
+  session      Session   @relation(fields: [sessionId], references: [id])
+  clientName   String    @map("client_name")
+  clientCpf    String    @map("client_cpf")
+  seat         String
+  paymentType  String    @map("payment_type") // Cartão, Pix, Dinheiro
+}
