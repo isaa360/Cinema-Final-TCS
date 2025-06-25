@@ -1,5 +1,3 @@
-# docker-compose.yml
-
 services:
   db:
     image: postgres:15-alpine
@@ -11,27 +9,29 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432" # Opcional: para acessar o banco de dados diretamente de fora do container
-
+      - "5432:5432" 
+    healthcheck: 
+      test: ["CMD-SHELL", "pg_isready -U user -d cinema_db"]
+      interval: 5s 
+      timeout: 5s
+      retries: 5 
+      start_period: 10s 
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     ports:
       - "3000:3000"
+      - "5555:5555"
     environment:
       DATABASE_URL: postgresql://user:password@db:5432/cinema_db?schema=public
-    depends_on:
-      - db
+    depends_on: 
+      db:
+        condition: service_healthy 
     volumes:
-      # Monta a pasta raiz do backend para desenvolvimento (hot-reloading)
       - ./backend:/app
-      # Impede que node_modules seja sobrescrito pelo volume do host
       - /app/node_modules
-      # Garante que o diretório .next do container não seja afetado pela montagem do host
       - /app/.next
-    # Este comando é executado quando o container é iniciado.
-    # Garante que o cliente Prisma seja gerado e as migrações aplicadas no BD
     command: sh -c "npx prisma generate && npx prisma migrate deploy && npm run start"
 
   frontend:
@@ -39,15 +39,13 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "80:80" # Mapeia a porta 80 do container para a porta 80 do host
+      - "80:80"
     depends_on:
-      - backend # Garante que o backend esteja rodando antes do frontend
+      - backend
     volumes:
-      # Monta as pastas de código fonte para desenvolvimento (hot-reloading do React)
       - ./frontend/src:/app/src
       - ./frontend/public:/app/public
-      # Impede que node_modules seja sobrescrito pelo volume do host
       - /app/node_modules
 
 volumes:
-  db_data: # Definição do volume nomeado para persistência dos dados do PostgreSQL
+  db_data:
